@@ -156,14 +156,18 @@ def _process_restartcheck_result(rs_result):
     """
     if "No packages seem to need to be restarted" in rs_result:
         return
+    reboot_required = False
     for rstr in rs_result:
         if "System restart required" in rstr:
             _update_nilrt_restart_state()
-            __salt__["system.set_reboot_required_witnessed"]()
-        else:
-            service = os.path.join("/etc/init.d", rstr)
-            if os.path.exists(service):
-                __salt__["cmd.run"]([service, "restart"])
+            __salt__['system.set_reboot_required_witnessed']()
+            reboot_required = True
+    if kwargs.get("restart_services", True) or not reboot_required:
+        for rstr in rs_result:
+            if "System restart required" not in rstr:
+                service = os.path.join("/etc/init.d", rstr)
+                if os.path.exists(service):
+                    __salt__["cmd.run"]([service, "restart"])
 
 
 def __virtual__():
@@ -490,7 +494,10 @@ def install(
 
         .. versionadded:: 2017.7.0
 
-    Returns a dict containing the new package names and versions::
+    restart_services
+        Whether to restart services even if a reboot is required. Default is True.
+
+		Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
@@ -613,7 +620,7 @@ def install(
             info={"errors": errors, "changes": ret},
         )
 
-    _process_restartcheck_result(rs_result)
+    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
@@ -714,7 +721,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
             info={"errors": errors, "changes": ret},
         )
 
-    _process_restartcheck_result(rs_result)
+    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
@@ -795,7 +802,7 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
             info={"errors": errors, "changes": ret},
         )
 
-    _process_restartcheck_result(rs_result)
+    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
