@@ -494,7 +494,7 @@ def install(
 
         .. versionadded:: 2017.7.0
 
-    restart_services
+    always_restart_services
         Whether to restart services even if a reboot is required. Default is True.
 
     Returns a dict containing the new package names and versions::
