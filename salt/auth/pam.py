@@ -59,15 +59,19 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 try:
-    LIBC = CDLL(find_library("c"))
+    LIBCPATH = find_library("c")
+    if LIBCPATH is None:
+        HAS_LIBC = False
+    else:
+        LIBC = CDLL(LIBCPATH)
 
-    CALLOC = LIBC.calloc
-    CALLOC.restype = c_void_p
-    CALLOC.argtypes = [c_uint, c_uint]
+        CALLOC = LIBC.calloc
+        CALLOC.restype = c_void_p
+        CALLOC.argtypes = [c_uint, c_uint]
 
-    STRDUP = LIBC.strdup
-    STRDUP.argstypes = [c_char_p]
-    STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
+        STRDUP = LIBC.strdup
+        STRDUP.argstypes = [c_char_p]
+        STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
 except Exception:  # pylint: disable=broad-except
     log.trace("Failed to load libc using ctypes", exc_info=True)
     HAS_LIBC = False
