@@ -1249,7 +1249,7 @@ def is_running(fun):
                 if fnmatch.fnmatch(functionItem, fun):
                     ret.append(data)
                     break
-        elif fnmatch.fnmatch(data.get('fun', ''), fun):
+        elif fnmatch.fnmatch(functionData, fun):
             ret.append(data)
     return ret
 
