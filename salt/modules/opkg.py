@@ -650,13 +650,13 @@ def install(
             info={"errors": errors, "changes": ret},
         )
 
+    _process_restartcheck_result(rs_result, **kwargs)
+
     if list_pkgs_errors:
         raise CommandExecutionError(
             "Problem encountered after installing package(s). Cannot provide changes list.",
             info={"errors": list_pkgs_errors}
         )
-
-    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
@@ -725,7 +725,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     old = _execute_list_pkgs(list_pkgs_errors, False)
     if list_pkgs_errors:
         raise CommandExecutionError(
-            'Problem encountered before installing package(s)',
+            'Problem encountered before removing package(s)',
             info={'errors': list_pkgs_errors}
         )
 
@@ -766,13 +766,13 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
             info={"errors": errors, "changes": ret},
         )
 
+    _process_restartcheck_result(rs_result, **kwargs)
+
     if list_pkgs_errors:
         raise CommandExecutionError(
-            "Problem encountered after removing package(s). Cannot provide changes list.",
+            "Problem encountered after successfully removing package(s). Cannot provide changes list.",
             info={"errors": list_pkgs_errors}
         )
-
-    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
@@ -838,7 +838,7 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
     old = _execute_list_pkgs(list_pkgs_errors, False)
     if list_pkgs_errors:
         raise CommandExecutionError(
-            'Problem encountered before installing package(s)',
+            'Problem encountered before upgrading package(s)',
             info={'errors': list_pkgs_errors}
         )
 
@@ -860,13 +860,13 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
             info={"errors": errors, "changes": ret},
         )
 
+    _process_restartcheck_result(rs_result, **kwargs)
+
     if list_pkgs_errors:
         raise CommandExecutionError(
-            "Problem encountered after upgrading package(s). Cannot provide changes list.",
+            "Problem encountered after successfully upgrading package(s). Cannot provide changes list.",
             info={"errors": list_pkgs_errors}
         )
-
-    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
@@ -1079,7 +1079,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     if errors:
         raise CommandExecutionError(
-            "Problem encountered installing package(s)",
+            "Problem encountered listing package(s)",
             info={"errors": errors}
         )
     return ret
