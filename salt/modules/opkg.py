@@ -532,7 +532,14 @@ def install(
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    old = list_pkgs()
+    list_pkgs_errors = []
+    old = _execute_list_pkgs(list_pkgs_errors, False)
+    if list_pkgs_errors:
+        raise CommandExecutionError(
+            "Problem encountered before installing package(s)",
+            info={"errors": list_pkgs_errors}
+        )
+
     cmd_prefix = ["opkg", "install"]
     to_install = []
     to_reinstall = []
@@ -603,13 +610,15 @@ def install(
     for cmd in cmds:
         _execute_install_command(cmd, is_testmode, errors, test_packages)
 
-    __context__.pop("pkg.list_pkgs", None)
-    new = list_pkgs()
+    __context__.pop('pkg.list_pkgs', None)
+    new = _execute_list_pkgs(list_pkgs_errors, False)
     if is_testmode:
         new = copy.deepcopy(new)
         new.update(test_packages)
 
-    ret = salt.utils.data.compare_dicts(old, new)
+    ret = {}
+    if not list_pkgs_errors:
+        ret = salt.utils.data.compare_dicts(old, new)
 
     if pkg_type == "file" and reinstall:
         # For file-based packages, prepare 'to_reinstall' to have a list
@@ -639,6 +648,12 @@ def install(
         raise CommandExecutionError(
             "Problem encountered installing package(s)",
             info={"errors": errors, "changes": ret},
+        )
+
+    if list_pkgs_errors:
+        raise CommandExecutionError(
+            "Problem encountered after installing package(s). Cannot provide changes list.",
+            info={"errors": list_pkgs_errors}
         )
 
     _process_restartcheck_result(rs_result, **kwargs)
@@ -706,7 +721,14 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    old = list_pkgs()
+    list_pkgs_errors = []
+    old = _execute_list_pkgs(list_pkgs_errors, False)
+    if list_pkgs_errors:
+        raise CommandExecutionError(
+            'Problem encountered before installing package(s)',
+            info={'errors': list_pkgs_errors}
+        )
+
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
@@ -728,11 +750,13 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         errors = []
 
     __context__.pop("pkg.list_pkgs", None)
-    new = list_pkgs()
+    new = _execute_list_pkgs(list_pkgs_errors, False)
     if _is_testmode(**kwargs):
         reportedPkgs = _parse_reported_packages_from_remove_output(out["stdout"])
         new = {k: v for k, v in new.items() if k not in reportedPkgs}
-    ret = salt.utils.data.compare_dicts(old, new)
+    ret = {}
+    if not list_pkgs_errors:
+        ret = salt.utils.data.compare_dicts(old, new)
 
     rs_result = _get_restartcheck_result(errors)
 
@@ -740,6 +764,12 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         raise CommandExecutionError(
             "Problem encountered removing package(s)",
             info={"errors": errors, "changes": ret},
+        )
+
+    if list_pkgs_errors:
+        raise CommandExecutionError(
+            "Problem encountered after removing package(s). Cannot provide changes list.",
+            info={"errors": list_pkgs_errors}
         )
 
     _process_restartcheck_result(rs_result, **kwargs)
@@ -804,13 +834,20 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
     if salt.utils.data.is_true(refresh):
         refresh_db()
 
-    old = list_pkgs()
+    list_pkgs_errors = []
+    old = _execute_list_pkgs(list_pkgs_errors, False)
+    if list_pkgs_errors:
+        raise CommandExecutionError(
+            'Problem encountered before installing package(s)',
+            info={'errors': list_pkgs_errors}
+        )
 
     cmd = ["opkg", "upgrade"]
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
     __context__.pop("pkg.list_pkgs", None)
-    new = list_pkgs()
-    ret = salt.utils.data.compare_dicts(old, new)
+    new = _execute_list_pkgs(list_pkgs_errors, False)
+    if not list_pkgs_errors:
+        ret = salt.utils.data.compare_dicts(old, new)
 
     if result["retcode"] != 0:
         errors.append(result)
@@ -821,6 +858,12 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
         raise CommandExecutionError(
             "Problem encountered upgrading packages",
             info={"errors": errors, "changes": ret},
+        )
+
+    if list_pkgs_errors:
+        raise CommandExecutionError(
+            "Problem encountered after upgrading package(s). Cannot provide changes list.",
+            info={"errors": list_pkgs_errors}
         )
 
     _process_restartcheck_result(rs_result, **kwargs)
@@ -1031,6 +1074,25 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs versions_as_list=True
     """
+    errors = []
+    ret = _execute_list_pkgs(errors, versions_as_list)
+
+    if errors:
+        raise CommandExecutionError(
+            "Problem encountered installing package(s)",
+            info={"errors": errors}
+        )
+    return ret
+
+
+def _execute_list_pkgs(errors, versions_as_list=False, **kwargs):
+    """
+    List the packages currently installed in a dict::
+
+        {"<package_name>": "<version>"}
+
+    Accumulates errors in errors variable
+    """
     versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
     if any(
@@ -1043,7 +1105,18 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     cmd = ["opkg", "list-installed"]
     ret = {}
-    out = __salt__["cmd.run"](cmd, output_loglevel="trace", python_shell=False)
+    out_dict = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
+
+    if out_dict["retcode"] != 0:
+        if out_dict["stderr"]:
+            log.warning("error error")
+            errors.append(out_dict["stderr"])
+        else:
+            log.warning("error stdout")
+            errors.append([out_dict["stdout"]])
+        return ret
+
+    out = out_dict["stdout"]
     for line in salt.utils.itertools.split(out, "\n"):
         # This is a continuation of package description
         if not line or line[0] == " ":
