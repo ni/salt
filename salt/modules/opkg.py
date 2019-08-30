@@ -291,10 +291,10 @@ def _call_opkg(args, **kwargs):
         "python_shell": False,
     }
     params.update(kwargs)
-    for _ in range(5):
+    for idx in range(5):
         cmd_ret = __salt__["cmd.run_all"](args, **params)
         stderr = cmd_ret.get("stderr", "")
-        if "opkg_lock: Could not lock /run/opkg.lock" in stderr:
+        if "opkg_lock: Could not lock /run/opkg.lock" in stderr and idx < 4:
             import time
             time.sleep(2)
             continue
