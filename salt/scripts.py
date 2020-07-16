@@ -511,6 +511,12 @@ def salt_api():
 
     salt.utils.process.notify_systemd()
 
+    # Fix for setuptools generated scripts, so that it will
+    # work with multiprocessing fork emulation.
+    # (see multiprocessing.forking.get_preparation_data())
+    if __name__ != '__main__':
+        sys.modules['__main__'] = sys.modules[__name__]
+
     import salt.cli.api
 
     sapi = salt.cli.api.SaltAPI()  # pylint: disable=E1120
