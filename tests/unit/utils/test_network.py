@@ -4,6 +4,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import socket
 import textwrap
+import time
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
@@ -334,6 +335,12 @@ class NetworkTestCase(TestCase):
             addrs = network._test_addrs(addrinfo, 80)
             self.assertTrue(len(addrs) == 1)
             self.assertTrue(addrs[0] == addrinfo[2][4][0])
+
+            # attempt to connect to resolved address with default timeout
+            s.side_effect = socket.error
+            addrs = network._test_addrs(addrinfo, 80)
+            time.sleep(2)
+            self.assertFalse(len(addrs) == 0)
 
             # nothing can connect, but we've eliminated duplicates
             s.side_effect = socket.error
