@@ -73,6 +73,12 @@ except ImportError:
     # resource is not available on windows
     HAS_RESOURCE = False
 
+try:
+    import win32file
+    HAS_WIN32FILE = True
+except ImportError:
+    HAS_WIN32FILE = False
+
 log = logging.getLogger(__name__)
 
 
@@ -560,6 +566,8 @@ class Master(SMaster):
 
     def __set_max_open_files(self):
         if not HAS_RESOURCE:
+            if HAS_WIN32FILE:
+                self.__set_max_open_files_windows()
             return
         # Let's check to see how our max open files(ulimit -n) setting is
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
@@ -606,6 +614,19 @@ class Master(SMaster):
                     "to run properly.",
                     mof_c,
                 )
+
+    def __set_max_open_files_windows(self):
+        mof_c = self.opts["max_open_files"]
+        if mof_c:
+            try:
+                if mof_c > 8192:
+                    mof_c = 8192
+                    log.warning("max_open_files ajusted to 8192, since that is maximum in C runtime.")
+                mof_set = win32file._setmaxstdio(mof_c)  # pylint: disable=W0212
+                if mof_set != mof_c:
+                    log.error("Failed to set \"max_open_files\" on the process")
+            except ImportError:
+                log.error("Failed to set \"max_open_files\" on the process")
 
     def _pre_flight(self):
         """
