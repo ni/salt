@@ -1779,6 +1779,7 @@ def installed(
             pkgs = [name]
 
     kwargs["saltenv"] = __env__
+    kwargs["__pub_jid"] = __jid__
     refresh = salt.utils.pkg.check_refresh(__opts__, refresh)
 
     # check if capabilities should be checked and modify the requested packages
@@ -2760,6 +2761,7 @@ def latest(
             desired_pkgs = [name]
 
     kwargs["saltenv"] = __env__
+    kwargs["__pub_jid"] = __jid__
 
     # check if capabilities should be checked and modify the requested packages
     # accordingly.
@@ -3195,6 +3197,7 @@ def removed(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **
         .. versionadded:: 0.16.0
     """
     kwargs["saltenv"] = __env__
+    kwargs["__pub_jid"] = __jid__
     try:
         return _uninstall(
             action="remove",
@@ -3287,6 +3290,7 @@ def purged(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **k
         .. versionadded:: 0.16.0
     """
     kwargs["saltenv"] = __env__
+    kwargs["__pub_jid"] = __jid__
     try:
         return _uninstall(
             action="purge",
