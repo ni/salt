@@ -613,13 +613,10 @@ def install(
     if not cmds:
         return {}
 
-    updated_feeds = {}
+    feeds_updated_status = {}
     if refreshdb:
-        updated_feeds = refresh_db()
-    failed_to_update_feeds = []
-    for feed in updated_feeds:
-        if not updated_feeds[feed]:
-            failed_to_update_feeds.append(feed)
+        feeds_updated_status = refresh_db()
+    failed_to_update_feeds = [feed for feed in feeds_updated_status if not feeds_updated_status[feed]]
     feed_update_error = None
     if failed_to_update_feeds:
         feed_update_error = "Error getting repos: {}".format(", ".join(failed_to_update_feeds))
