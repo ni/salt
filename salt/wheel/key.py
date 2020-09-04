@@ -432,7 +432,6 @@ def gen_accept(id_, keysize=2048, force=False):
         >>> wheel.cmd('key.list', ['accepted'])
         {'minions': ['foo', 'minion1', 'minion2', 'minion3']}
     """
-    id_ = clean.id(id_)
     ret = gen(id_, keysize)
     acc_path = os.path.join(__opts__["pki_dir"], "minions", id_)
     if os.path.isfile(acc_path) and not force:
