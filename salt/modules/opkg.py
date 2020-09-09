@@ -585,26 +585,34 @@ def install(
                 else:
                     to_install.append(pkgname)
             else:
-                pkgstr = f"{pkgname}={version_num}"
                 cver = old.get(pkgname, "")
-                if (
-                    reinstall
-                    and cver
-                    and salt.utils.versions.compare(
-                        ver1=version_num, oper="==", ver2=cver, cmp_func=version_cmp
-                    )
-                ):
-                    to_reinstall.append(pkgstr)
-                elif not cver or salt.utils.versions.compare(
-                    ver1=version_num, oper=">=", ver2=cver, cmp_func=version_cmp
-                ):
-                    to_install.append(pkgstr)
-                else:
-                    if not kwargs.get("only_upgrade", False):
-                        to_downgrade.append(pkgstr)
-                    else:
-                        # This should cause the command to fail.
+                version_conditions = [x.strip() for x in version_num.split(",")]
+                for version_condition in version_conditions:
+                    (version_string, version_operator, operator_specified) = _get_version_info(version_condition)
+                    if operator_specified:
+                        # Version conditions are sent to the solver as install commands
+                        pkgstr = f"{pkgname}{version_operator}{version_string}"
                         to_install.append(pkgstr)
+                    else:
+                        pkgstr = f"{pkgname}={version_num}"
+                        if (
+                            reinstall
+                            and cver
+                            and salt.utils.versions.compare(
+                                ver1=version_num, oper="==", ver2=cver, cmp_func=version_cmp
+                            )
+                        ):
+                            to_reinstall.append(pkgstr)
+                        elif not cver or salt.utils.versions.compare(
+                            ver1=version_num, oper=">=", ver2=cver, cmp_func=version_cmp
+                        ):
+                            to_install.append(pkgstr)
+                        else:
+                            if not kwargs.get("only_upgrade", False):
+                                to_downgrade.append(pkgstr)
+                            else:
+                                # This should cause the command to fail.
+                                to_install.append(pkgstr)
 
     cmds = _build_install_command_list(
         cmd_prefix, to_install, to_downgrade, to_reinstall
@@ -675,6 +683,25 @@ def install(
         )
 
     return ret
+
+
+def _get_version_info(version_string):
+    """
+    Detects if the version has comparison operators.
+    Supported version operators are: >>, <<, >=, <=, !=
+    Returns:
+        Tuple: Containing versionString, operatorString, operatorSpecified
+    """
+    versionString = version_string
+    operatorString = ""
+    operatorSpecified = False
+    versionRegex = r"(<=>|!=|>=|<=|>>|<<|<>|>|<|=)\s?((?:[0-9]+:)?[0-9][a-zA-Z0-9+~.-]*)"
+    match = re.search(versionRegex, version_string)
+    if match:
+        operatorSpecified = True
+        versionString = match.group(2)
+        operatorString = match.group(1)
+    return (versionString, operatorString, operatorSpecified)
 
 
 def _parse_reported_packages_from_remove_output(output):

@@ -378,7 +378,7 @@ def compare(ver1="", oper="==", ver2="", cmp_func=None, ignore_epoch=False):
     Compares two version numbers. Accepts a custom function to perform the
     cmp-style version comparison, otherwise uses version_cmp().
     """
-    cmp_map = {"<": (-1,), "<=": (-1, 0), "==": (0,), ">=": (0, 1), ">": (1,)}
+    cmp_map = {"<<": (-1,), "<": (-1,), "<=": (-1, 0), "==": (0,), ">=": (0, 1), ">": (1,), ">>": (1,)}
     if oper not in ("!=",) and oper not in cmp_map:
         log.error("Invalid operator '%s' for version comparison", oper)
         return False
