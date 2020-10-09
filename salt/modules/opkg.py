@@ -23,6 +23,10 @@ import os
 import pathlib
 import re
 import shlex
+import subprocess
+import time
+import select
+from fcntl import fcntl, F_GETFL, F_SETFL
 
 import salt.utils.args
 import salt.utils.data
@@ -427,15 +431,166 @@ def _parse_reported_packages_from_install_output(output):
 
     return reported_pkgs
 
+def _get_total_packages(cmd):
+    """
+    Runs the given command in test-mode (--noaction) and returns the number of packages
+    that have to be installed/removed/upgraded/downgraded
+    """
+    test_cmd = copy.deepcopy(cmd)
+    test_cmd.append("--noaction")
 
-def _execute_install_command(cmd, parse_output, errors, parsed_packages):
+    out = _call_opkg(test_cmd)
+    if out["retcode"] != 0:
+        return -1
+
+    output_lines = out["stdout"].split("\n")
+    return sum(_get_operation_from_output_line(line, False) is not None for line in output_lines)
+
+def _get_operation_from_output_line(line, include_download = True):
+    """
+    Gets the current opkg operation from output
+    Example:
+        "Installing vim (17.0.0) on root"
+    Returns: "install"
+    """
+    operations = {
+            "Installing": "install",
+            "Upgrading": "upgrade",
+            "Removing": "remove",
+            "Downgrading": "downgrade"
+            }
+    if include_download:
+        operations["Downloading"] = "download"
+
+    line_tokens = line.split()
+
+    return operations.get(line_tokens[0]) if line_tokens else None
+
+
+def _get_package_from_output_line(operation, line):
+    """
+    Gets the package that is currently Installing/Upgrading/Removing/Downgrading
+    Returns the name of the package that opkg is currently processing
+
+    Example:
+        operation = "install"
+        line = "Installing vim (17.0.0) on root"
+    Returns: vim
+    """
+    package = None
+    if operation == "download" and line.endswith(".ipk.\n"):
+        # Example: "Downloading http://nickdanger.amer.corp.natinst.com/feeds/OneRT/20.0/x64//ni-xnet-notices_20.0.0.49152-0+f0_all.ipk."
+        package = line.split("/")[-1].split("_")[0]
+    elif operation in ["install", "upgrade", "remove", "downgrade"]:
+        line_tokens = line.split()
+        # For example: "Installing/Removing/.. package_name (version_number) ..."
+        # We do not want to count "Removing any package that.." messages
+        if len(line_tokens) >= 3 and line_tokens[2].startswith("("):
+            package = line_tokens[1]
+    
+    return package
+
+
+def _get_operation_and_package_from_output_line(line):
+    """
+    Returns the (operation, package-name) combination if the line is a valid opkg operation output
+    If operation or package-name could not be parsed from the line, it returns None instead of the
+    operation/package-name
+    """
+    operation = _get_operation_from_output_line(line)
+    current_package = _get_package_from_output_line(operation, line)
+
+    return operation, current_package
+
+
+def _process_with_progress(cmd, jid, total_packages_count):
+    """
+    Process the opkg command and fire events to the salt-master bus
+    indicating the progress of the operation
+    """
+    stdout = ""
+    minion_id = str(salt.config.get_id(__opts__)[0])
+    notify_progress_period = __opts__.get("pkg_progress_period", 60)
+    last_notify_timestamp = 0
+    processed_count = 0
+    force_update = True
+    last_sent_package = None
+    current_package = None
+    operation = None
+    event = salt.utils.event.get_event(
+            "minion", opts=__opts__, listen=False
+            )
+    tag = "salt/minion/pkg_progress/{}".format(minion_id)
+    proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=1,
+            universal_newlines=True
+            )
+    # We don"t want the standard output to be blocking to avoid missing updates
+    # based on specified progress period
+    try:
+        flags = fcntl(proc.stdout, F_GETFL)
+        stdout_fileno = proc.stdout.fileno()
+        fcntl(stdout_fileno, F_SETFL, flags | os.O_NONBLOCK)
+        while proc.poll() is None:
+            ready_to_read = select.select([stdout_fileno], [], [])[0]
+            if not ready_to_read:
+                time.sleep(1)
+            else:
+                output = proc.stdout.readline()
+                stdout += output
+                line_operation, line_package = _get_operation_and_package_from_output_line(output)
+                if not line_operation or not line_package:
+                    continue
+
+                operation = line_operation
+                current_package = line_package
+                if operation in ["install", "upgrade", "remove", "downgrade"]:
+                    processed_count += 1
+                    force_update |= processed_count in [1, total_packages_count]
+            timestamp = time.time()
+            if (timestamp - last_notify_timestamp > notify_progress_period or force_update) and \
+                    last_sent_package != current_package:
+                force_update = False
+                last_sent_package = current_package
+                last_notify_timestamp = timestamp
+                data = {
+                        "jid": jid,
+                        "progress_info": {
+                            "operation": operation,
+                            "package": current_package,
+                            "count": processed_count,
+                            "total_count": total_packages_count
+                        }
+                }
+                event.fire_master(data, tag)
+    except Exception as exc:
+        log.warning("Could not get progress due to the following exception: \"%s\"", str(exc))
+    output, stderr = proc.communicate()
+
+    return {
+        "retcode": proc.returncode,
+        "stdout": stdout + output,
+        "stderr": stderr
+    }
+
+def _execute_install_command(cmd, parse_output, errors, parsed_packages, jid):
     """
     Executes a command for the install operation.
     If the command fails, its error output will be appended to the errors list.
     If the command succeeds and parse_output is true, updated packages will be appended
     to the parsed_packages dictionary.
     """
-    out = _call_opkg(cmd)
+    out = {}
+    if __opts__.get("notify_pkg_progress") and not parse_output:
+        total_packages_count = _get_total_packages(cmd)
+        out = _process_with_progress(cmd, jid, total_packages_count) if total_packages_count != -1 else _call_opkg(cmd)
+    else:
+        out = _call_opkg(cmd)
+
     if out["retcode"] != 0:
         if out["stderr"]:
             errors.append(out["stderr"])
@@ -631,8 +786,10 @@ def install(
     errors = []
     is_testmode = _is_testmode(**kwargs)
     test_packages = {}
+    jid = kwargs.get('__pub_jid')
+
     for cmd in cmds:
-        _execute_install_command(cmd, is_testmode, errors, test_packages)
+        _execute_install_command(cmd, is_testmode, errors, test_packages, jid)
 
     __context__.pop('pkg.list_pkgs', None)
     new = _execute_list_pkgs(list_pkgs_errors, False)
@@ -723,6 +880,25 @@ def _parse_reported_packages_from_remove_output(output):
 
     return reported_pkgs
 
+def _execute_remove_command(cmd, is_testmode, errors, jid):
+    '''
+    Executes a command for the remove operation.
+    If the command fails, its error output will be set to the errors list.
+    '''
+    out = {}
+    if __opts__.get('notify_pkg_progress') and not is_testmode:
+        total_packages_count = _get_total_packages(cmd)
+        out = _process_with_progress(cmd, jid, total_packages_count) if total_packages_count != -1 else _call_opkg(cmd)
+    else:
+        out = _call_opkg(cmd)
+
+    if out['retcode'] != 0:
+        if out['stderr']:
+            errors = [out['stderr']]
+        else:
+            errors = [out['stdout']]
+    else:
+        errors = []
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     """
@@ -783,18 +959,14 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         cmd.append("--autoremove")
     cmd.extend(targets)
 
-    out = _call_opkg(cmd)
-    if out["retcode"] != 0:
-        if out["stderr"]:
-            errors = [out["stderr"]]
-        else:
-            errors = [out["stdout"]]
-    else:
-        errors = []
+    errors = []
+    jid = kwargs.get("__pub_jid")
+    is_testmode = _is_testmode(**kwargs)
+    _execute_remove_command(cmd, is_testmode, errors, jid)
 
     __context__.pop("pkg.list_pkgs", None)
     new = _execute_list_pkgs(list_pkgs_errors, False)
-    if _is_testmode(**kwargs):
+    if is_testmode:
         reportedPkgs = _parse_reported_packages_from_remove_output(out["stdout"])
         new = {k: v for k, v in new.items() if k not in reportedPkgs}
     ret = {}
