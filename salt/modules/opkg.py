@@ -880,7 +880,7 @@ def _parse_reported_packages_from_remove_output(output):
 
     return reported_pkgs
 
-def _execute_remove_command(cmd, is_testmode, errors, jid):
+def _execute_remove_command(cmd, is_testmode, errors, reportedPkgs, jid):
     '''
     Executes a command for the remove operation.
     If the command fails, its error output will be set to the errors list.
@@ -892,13 +892,14 @@ def _execute_remove_command(cmd, is_testmode, errors, jid):
     else:
         out = _call_opkg(cmd)
 
+    errors = []
     if out['retcode'] != 0:
         if out['stderr']:
             errors = [out['stderr']]
         else:
             errors = [out['stdout']]
-    else:
-        errors = []
+    elif is_testmode:
+        reportedPkgs = _parse_reported_packages_from_remove_output(out['stdout'])
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     """
@@ -962,12 +963,12 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     errors = []
     jid = kwargs.get("__pub_jid")
     is_testmode = _is_testmode(**kwargs)
-    _execute_remove_command(cmd, is_testmode, errors, jid)
+    reportedPkgs = {}
+    _execute_remove_command(cmd, is_testmode, errors, reportedPkgs, jid)
 
     __context__.pop("pkg.list_pkgs", None)
     new = _execute_list_pkgs(list_pkgs_errors, False)
     if is_testmode:
-        reportedPkgs = _parse_reported_packages_from_remove_output(out["stdout"])
         new = {k: v for k, v in new.items() if k not in reportedPkgs}
     ret = {}
     if not list_pkgs_errors:
