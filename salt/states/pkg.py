@@ -1803,9 +1803,13 @@ def installed(
             [x for x in oldsources if next(iter(list(x.keys()))) in to_reinstall]
         )
 
-    comment = []
+    commentTestMode = []
+    testMode = False
+    defaultResult = False
     changes = {}
     if __opts__["test"]:
+        testMode = True
+        defaultResult = None
         if targets:
             if sources:
                 _targets = targets
@@ -1813,11 +1817,11 @@ def installed(
                 _targets = [_get_desired_pkg(x, targets) for x in targets]
             summary = ", ".join(targets)
             changes.update({x: {"new": "installed", "old": ""} for x in targets})
-            comment.append(
+            commentTestMode.append(
                 f"The following packages would be installed/updated: {summary}"
             )
         if to_unpurge:
-            comment.append(
+            commentTestMode.append(
                 "The following packages would have their selection status "
                 "changed from 'purge' to 'install': {}".format(", ".join(to_unpurge))
             )
@@ -1839,28 +1843,30 @@ def installed(
                     )
                 msg = "The following packages would be reinstalled: "
                 msg += ", ".join(reinstall_targets)
-                comment.append(msg)
+                commentTestMode.append(msg)
             else:
                 for reinstall_pkg in to_reinstall:
                     if sources:
                         pkgstr = reinstall_pkg
                     else:
                         pkgstr = _get_desired_pkg(reinstall_pkg, to_reinstall)
-                    comment.append(
+                    commentTestMode.append(
                         "Package '{}' would be reinstalled because the "
                         "following files have been altered:".format(pkgstr)
                     )
                     changes.update({reinstall_pkg: {}})
-                    comment.append(_nested_output(altered_files[reinstall_pkg]))
+                    commentTestMode.append(_nested_output(altered_files[reinstall_pkg]))
         ret = {
             "name": name,
             "changes": changes,
             "result": None,
-            "comment": "\n".join(comment),
+            "comment": "\n".join(commentTestMode),
         }
         if warnings:
             ret.setdefault("warnings", []).extend(warnings)
         return ret
+
+    comment = []
 
     modified_hold = None
     not_modified_hold = None
@@ -1879,11 +1885,12 @@ def installed(
                 normalize=normalize,
                 update_holds=update_holds,
                 ignore_epoch=ignore_epoch,
+                test=testMode,
                 split_arch=False,
                 **kwargs,
             )
         except CommandExecutionError as exc:
-            ret = {"name": name, "result": False}
+            ret = {"name": name, "result": defaultResult}
             if exc.info:
                 # Get information for state return from the exception.
                 ret["changes"] = exc.info.get("changes", {})
@@ -1922,7 +1929,7 @@ def installed(
             ret = {
                 "name": name,
                 "changes": changes,
-                "result": False,
+                "result": defaultResult,
                 "comment": "\n".join(comment),
             }
             if warnings:
@@ -1933,7 +1940,7 @@ def installed(
                 ret = {
                     "name": name,
                     "changes": {},
-                    "result": False,
+                    "result": defaultResult,
                     "comment": (
                         "An error was encountered while "
                         "holding/unholding package(s): {}".format(hold_ret["comment"])
@@ -2129,6 +2136,10 @@ def installed(
             else:
                 comment.append(msg)
         result = False
+
+    if testMode:
+        comment = commentTestMode
+        result = None
 
     ret = {
         "name": name,
