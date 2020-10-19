@@ -1698,18 +1698,22 @@ def installed(
         sources.extend([x for x in oldsources
                         if next(iter(list(x.keys()))) in to_reinstall])
 
-    comment = []
+    commentTestMode = []
+    testMode = False
+    defaultResult = False
     if __opts__['test']:
+        testMode = True
+        defaultResult = None
         if targets:
             if sources:
                 summary = ', '.join(targets)
             else:
                 summary = ', '.join([_get_desired_pkg(x, targets)
                                      for x in targets])
-            comment.append('The following packages would be '
+            commentTestMode.append('The following packages would be '
                            'installed/updated: {0}'.format(summary))
         if to_unpurge:
-            comment.append(
+            commentTestMode.append(
                 'The following packages would have their selection status '
                 'changed from \'purge\' to \'install\': {0}'
                 .format(', '.join(to_unpurge))
@@ -1728,28 +1732,22 @@ def installed(
                         )
                 msg = 'The following packages would be reinstalled: '
                 msg += ', '.join(reinstall_targets)
-                comment.append(msg)
+                commentTestMode.append(msg)
             else:
                 for reinstall_pkg in to_reinstall:
                     if sources:
                         pkgstr = reinstall_pkg
                     else:
                         pkgstr = _get_desired_pkg(reinstall_pkg, to_reinstall)
-                    comment.append(
+                    commentTestMode.append(
                         'Package \'{0}\' would be reinstalled because the '
                         'following files have been altered:'.format(pkgstr)
                     )
-                    comment.append(
+                    commentTestMode.append(
                         _nested_output(altered_files[reinstall_pkg])
                     )
-        ret = {'name': name,
-               'changes': {},
-               'result': None,
-               'comment': '\n'.join(comment)}
-        if warnings:
-            ret.setdefault('warnings', []).extend(warnings)
-        return ret
 
+    comment = []
     changes = {'installed': {}}
     modified_hold = None
     not_modified_hold = None
@@ -1767,9 +1765,10 @@ def installed(
                                               normalize=normalize,
                                               update_holds=update_holds,
                                               ignore_epoch=ignore_epoch,
+                                              test=testMode,
                                               **kwargs)
         except CommandExecutionError as exc:
-            ret = {'name': name, 'result': False}
+            ret = {'name': name, 'result': defaultResult}
             if exc.info:
                 # Get information for state return from the exception.
                 ret['changes'] = exc.info.get('changes', {})
@@ -1806,7 +1805,7 @@ def installed(
             comment.append(six.text_type(exc))
             ret = {'name': name,
                    'changes': changes,
-                   'result': False,
+                   'result': defaultResult,
                    'comment': '\n'.join(comment)}
             if warnings:
                 ret.setdefault('warnings', []).extend(warnings)
@@ -1815,7 +1814,7 @@ def installed(
             if 'result' in hold_ret and not hold_ret['result']:
                 ret = {'name': name,
                        'changes': {},
-                       'result': False,
+                       'result': defaultResult,
                        'comment': 'An error was encountered while '
                                   'holding/unholding package(s): {0}'
                                   .format(hold_ret['comment'])}
@@ -2013,6 +2012,10 @@ def installed(
             else:
                 comment.append(msg)
         result = False
+
+    if testMode:
+        comment = commentTestMode
+        result = None
 
     ret = {'name': name,
            'changes': changes,
