@@ -899,14 +899,13 @@ def _execute_remove_command(cmd, is_testmode, errors, reportedPkgs, jid):
     else:
         out = _call_opkg(cmd)
 
-    errors = []
     if out['retcode'] != 0:
         if out['stderr']:
-            errors = [out['stderr']]
+            errors.append(out['stderr'])
         else:
-            errors = [out['stdout']]
+            errors.append(out['stdout'])
     elif is_testmode:
-        reportedPkgs = _parse_reported_packages_from_remove_output(out['stdout'])
+        reportedPkgs.update(_parse_reported_packages_from_remove_output(out['stdout']))
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     """
