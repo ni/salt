@@ -413,19 +413,26 @@ def _parse_reported_packages_from_install_output(output):
     We are looking for lines like:
         Installing <package> (<version>) on <target>
     or
-        Upgrading <package> from <oldVersion> to <version> on root
+        Upgrading <package> from <oldVersion> to <version> on <target>
+    or
+        Upgrading <oldPackage> (<oldVersion>) to <package> (<version>) on <target>
     """
     reported_pkgs = {}
     install_pattern = re.compile(
         r"Installing\s(?P<package>.*?)\s\((?P<version>.*?)\)\son\s(?P<target>.*?)"
     )
-    upgrade_pattern = re.compile(
+    internal_solver_upgrade_pattern = re.compile(
         r"Upgrading\s(?P<package>.*?)\sfrom\s(?P<oldVersion>.*?)\sto\s(?P<version>.*?)\son\s(?P<target>.*?)"
+    )
+    libsolv_solver_upgrade_pattern = re.compile(
+        r"Upgrading\s(?P<oldPackage>.*?)\s\((?P<oldVersion>.*?)\)\sto\s(?P<package>.*?)\s\((?P<version>.*?)\)\son\s(?P<target>.*?)"
     )
     for line in salt.utils.itertools.split(output, "\n"):
         match = install_pattern.match(line)
         if match is None:
-            match = upgrade_pattern.match(line)
+            match = internal_solver_upgrade_pattern.match(line)
+        if match is None:
+            match = libsolv_solver_upgrade_pattern.match(line)
         if match:
             reported_pkgs[match.group("package")] = match.group("version")
 
