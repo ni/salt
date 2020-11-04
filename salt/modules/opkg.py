@@ -550,14 +550,12 @@ def _process_with_progress(cmd, jid, total_packages_count):
                 output = proc.stdout.readline()
                 stdout += output
                 line_operation, line_package = _get_operation_and_package_from_output_line(output)
-                if not line_operation or not line_package:
-                    continue
-
-                operation = line_operation
-                current_package = line_package
-                if operation in ["install", "upgrade", "remove", "downgrade"]:
-                    processed_count += 1
-                    force_update |= processed_count in [1, total_packages_count]
+                if line_operation and line_package:
+                    operation = line_operation
+                    current_package = line_package
+                    if operation in ["install", "upgrade", "remove", "downgrade"]:
+                        processed_count += 1
+                        force_update |= processed_count in [1, total_packages_count]
             timestamp = time.time()
             if (timestamp - last_notify_timestamp > notify_progress_period or force_update) and \
                     last_sent_package != current_package:
