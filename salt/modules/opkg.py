@@ -989,13 +989,8 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    list_pkgs_errors = []
-    old = _execute_list_pkgs(list_pkgs_errors, False)
-    if list_pkgs_errors:
-        raise CommandExecutionError(
-            'Problem encountered before removing package(s)',
-            info={'errors': list_pkgs_errors}
-        )
+    old = info_installed(attr="version")
+    old = {key: value.get('version') for key,value in old.items()}
 
     targets = [x for x in pkg_params if x in old]
     if not targets:
@@ -1015,12 +1010,12 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     _execute_remove_command(cmd, is_testmode, errors, reportedPkgs, jid)
 
     __context__.pop("pkg.list_pkgs", None)
-    new = _execute_list_pkgs(list_pkgs_errors, False)
+    new = info_installed(attr="version")
+    new = {key: value.get("version") for key,value in new.items()}
     if is_testmode:
         new = {k: v for k, v in new.items() if k not in reportedPkgs}
-    ret = {}
-    if not list_pkgs_errors:
-        ret = salt.utils.data.compare_dicts(old, new)
+
+    ret = salt.utils.data.compare_dicts(old, new)
 
     rs_result = _get_restartcheck_result(errors)
 
@@ -1031,12 +1026,6 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         )
 
     _process_restartcheck_result(rs_result, **kwargs)
-
-    if list_pkgs_errors:
-        raise CommandExecutionError(
-            "Problem encountered after successfully removing package(s). Cannot provide changes list.",
-            info={"errors": list_pkgs_errors}
-        )
 
     return ret
 
