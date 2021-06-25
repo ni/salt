@@ -182,6 +182,9 @@ class AsyncReqChannel:
             "load": load,
             "version": 3,
         }
+        if self.ttype == "tcp":
+            # send NI API key for TCP transport
+            ret["ni-api-key"] = self.opts["ni_api_key"]
         if self.crypt == "aes":
             ret["id"] = self.opts["id"]
             ret["enc_algo"] = self.opts["encryption_algorithm"]
@@ -493,11 +496,17 @@ class AsyncPubChannel:
         return self.transport.on_recv(wrap_callback)
 
     def _package_load(self, load):
-        return {
+        ret = {
             "enc": self.crypt,
             "load": load,
             "version": 3,
         }
+
+        if self.ttype == "tcp":
+            # send NI API key for TCP transport
+            ret["ni-api-key"] = self.opts["ni_api_key"]
+
+        return ret
 
     @salt.ext.tornado.gen.coroutine
     def send_id(self, tok, force_auth):
