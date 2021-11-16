@@ -3441,6 +3441,7 @@ def info_installed(*names, **kwargs):
     """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     failhard = kwargs.pop("failhard", True)
+    attr = kwargs.pop("attr", None) # Package attributes to return
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
