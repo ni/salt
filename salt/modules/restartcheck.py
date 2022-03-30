@@ -402,7 +402,7 @@ def _file_changed_nilrt(full_filepath):
         return True
 
     return bool(
-        __salt__["cmd.retcode"](f"md5sum -cs {md5sum_file}", output_loglevel="quiet")
+        __salt__["cmd.retcode"](f"md5sum -c {md5sum_file} --quiet", output_loglevel="quiet")
     )
 
 
@@ -520,7 +520,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     for kernel in kernel_versions:
         _check_timeout(start_time, timeout)
         if kernel in kernel_current:
-            if __grains__.get("os_family") == "NILinuxRT":
+            if __grains__.get("os_family") == NILRT_FAMILY_NAME:
                 # Check kernel modules and hardware API's for version changes
                 # If a restartcheck=True event was previously witnessed, propagate it
                 if (
@@ -556,11 +556,12 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     else:
         excludepid = []
 
-    for service in __salt__["service.get_running"]():
-        _check_timeout(start_time, timeout)
-        service_show = __salt__["service.show"](service)
-        if "ExecMainPID" in service_show:
-            running_services[service] = int(service_show["ExecMainPID"])
+    if __grains__.get("os_family") != NILRT_FAMILY_NAME:
+        for service in __salt__["service.get_running"]():
+            _check_timeout(start_time, timeout)
+            service_show = __salt__["service.show"](service)
+            if "ExecMainPID" in service_show:
+                running_services[service] = int(service_show["ExecMainPID"])
 
     owners_cache = {}
     for deleted_file in _deleted_files():
@@ -588,15 +589,16 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
             if not packagename:
                 packagename = name
             owners_cache[readlink] = packagename
-        for running_service in running_services:
-            _check_timeout(start_time, timeout)
-            if (
-                running_service not in restart_services
-                and pid == running_services[running_service]
-            ):
-                if packagename and packagename not in ignorelist:
-                    restart_services.append(running_service)
-                    name = running_service
+        if __grains__.get("os_family") != NILRT_FAMILY_NAME:
+            for running_service in running_services:
+                _check_timeout(start_time, timeout)
+                if (
+                    running_service not in restart_services
+                    and pid == running_services[running_service]
+                ):
+                    if packagename and packagename not in ignorelist:
+                        restart_services.append(running_service)
+                        name = running_service
         if packagename and packagename not in ignorelist:
             program = "\t" + str(pid) + " " + readlink + " (file: " + str(path) + ")"
             if packagename not in packages:
@@ -695,12 +697,13 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
             )
         else:
             nonrestartable.append(package)
-        if packages[package]["process_name"] in restart_services:
+        if __grains__.get("os_family") != NILRT_FAMILY_NAME and packages[package]["process_name"] in restart_services:
             restart_services.remove(packages[package]["process_name"])
 
-    for restart_service in restart_services:
-        _check_timeout(start_time, timeout)
-        restartservicecommands.extend(["systemctl restart " + restart_service])
+    if __grains__.get("os_family") != NILRT_FAMILY_NAME:
+        for restart_service in restart_services:
+            _check_timeout(start_time, timeout)
+            restartservicecommands.extend(["systemctl restart " + restart_service])
 
     ret = _format_output(
         kernel_restart,
