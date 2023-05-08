@@ -670,7 +670,12 @@ class MinionBase:
         if isinstance(opts["master"], list):
             conn = False
             last_exc = None
-            opts["master_uri_list"] = []
+
+            # if the connection to the saltmaster was lost,
+            # don't reinitialize the uri list to keep using the same one
+            if not failed:
+                opts["master_uri_list"] = []
+
             opts["local_masters"] = copy.copy(opts["master"])
 
             # shuffle the masters and then loop through them
@@ -683,22 +688,25 @@ class MinionBase:
                 else:
                     random.shuffle(opts["local_masters"])
 
-            # This sits outside of the connection loop below because it needs to set
-            # up a list of master URIs regardless of which masters are available
-            # to connect _to_. This is primarily used for masterless mode, when
-            # we need a list of master URIs to fire calls back to.
-            for master in opts["local_masters"]:
-                opts["master"] = master
-                opts.update(prep_ip_port(opts))
-                if opts["master_type"] == "failover":
-                    try:
-                        opts["master_uri_list"].append(
-                            resolve_dns(opts, False)["master_uri"]
-                        )
-                    except SaltClientError:
-                        continue
-                else:
-                    opts["master_uri_list"].append(resolve_dns(opts)["master_uri"])
+            # if the connection to the saltmaster was lost,
+            # don't reinitialize the uri list to keep using the same one
+            if not failed:
+                # This sits outside of the connection loop below because it needs to set
+                # up a list of master URIs regardless of which masters are available
+                # to connect _to_. This is primarily used for masterless mode, when
+                # we need a list of master URIs to fire calls back to.
+                for master in opts["local_masters"]:
+                    opts["master"] = master
+                    opts.update(prep_ip_port(opts))
+                    if opts["master_type"] == "failover":
+                        try:
+                            opts["master_uri_list"].append(
+                                resolve_dns(opts, False)["master_uri"]
+                            )
+                        except SaltClientError:
+                            continue
+                    else:
+                        opts["master_uri_list"].append(resolve_dns(opts)["master_uri"])
 
             if not opts["master_uri_list"]:
                 msg = "No master could be resolved"
@@ -720,14 +728,22 @@ class MinionBase:
                     )
                 for master in opts["local_masters"]:
                     opts["master"] = master
-                    opts.update(prep_ip_port(opts))
-                    if opts["master_type"] == "failover":
-                        try:
-                            opts.update(resolve_dns(opts, False))
-                        except SaltClientError:
-                            continue
+
+                    # look for a different ip only after attempting current one 3 times
+                    if not failed or (failed and attempts > 3):
+                        opts.update(prep_ip_port(opts))
+                        if opts["master_type"] == "failover":
+                            try:
+                                opts.update(resolve_dns(opts, False))
+                            except SaltClientError:
+                                continue
+                        else:
+                            opts.update(resolve_dns(opts))
                     else:
-                        opts.update(resolve_dns(opts))
+                        log.warn(
+                            'Connecting to the same master ip. Attempt %s of 3',
+                            attempts
+                        )
 
                     # on first run, update self.opts with the whole master list
                     # to enable a minion to re-use old masters if they get fixed
