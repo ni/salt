@@ -852,7 +852,7 @@ def _configure_static_interface(interface, **settings):
     if os.path.exists(INTERFACES_CONFIG):
         try:
             with salt.utils.files.fopen(INTERFACES_CONFIG, "r") as config_file:
-                parser.readfp(config_file)
+                parser.read_file(config_file)
         except configparser.MissingSectionHeaderError:
             pass
     hwaddr = interface.hwaddr[:-1]
