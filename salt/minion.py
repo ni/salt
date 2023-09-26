@@ -1074,7 +1074,7 @@ class MinionBase:
                         else:
                             opts.update(resolve_dns(opts))
                     else:
-                        log.warn(
+                        log.debug(
                             'Connecting to the same master ip. Attempt %s of 3',
                             attempts
                         )
