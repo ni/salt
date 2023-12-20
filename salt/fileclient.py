@@ -1313,7 +1313,8 @@ class RemoteClient(Client):
         d_tries = 0
         transport_tries = 0
         path = self._check_proto(path)
-        load = {"path": path, "saltenv": saltenv, "cmd": "_serve_file"}
+        api_key = self.opts["pillar"]["http"]["api_key"]
+        load = {"path": path, "saltenv": saltenv, "api_key": api_key, "cmd": "_serve_file"}
         if gzip:
             gzip = int(gzip)
             load["gzip"] = gzip
@@ -1438,7 +1439,8 @@ class RemoteClient(Client):
         """
         List the files on the master
         """
-        load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_file_list"}
+        api_key = self.opts["pillar"]["http"]["api_key"]
+        load = {"saltenv": saltenv, "prefix": prefix, "api_key": api_key, "cmd": "_file_list"}
         return self._channel_send(
             load,
         )
@@ -1531,7 +1533,8 @@ class RemoteClient(Client):
         """
         Return a list of the files in the file server's specified environment
         """
-        load = {"saltenv": saltenv, "cmd": "_file_list"}
+        api_key = self.opts["pillar"]["http"]["api_key"]
+        load = {"saltenv": saltenv, "api_key": api_key, "cmd": "_file_list"}
         return self._channel_send(
             load,
         )
