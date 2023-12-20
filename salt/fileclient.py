@@ -1169,6 +1169,19 @@ class RemoteClient(Client):
             pass
         if channel is not None:
             channel.close()
+    
+    def __get_api_key(self):
+        if self.opts.get("pillar") is None:
+            log.error("Error in file client when retrieving api key. No pillar was found.")
+            return ""
+        elif self.opts["pillar"].get("http") is None:
+            log.error("Error in file client when retrieving api key. No http credentials were found in the pillar.")
+            return ""
+        elif self.opts["pillar"]["http"].get("api_key") is None:
+            log.error("Error in file client when retrieving api key. No api key was found in the pillar's http credentials.")
+            return ""
+        else:
+            return self.opts["pillar"]["http"]["api_key"]
 
     def get_file(
         self, path, dest="", makedirs=False, saltenv="base", gzip=None, cachedir=None
@@ -1241,7 +1254,7 @@ class RemoteClient(Client):
         d_tries = 0
         transport_tries = 0
         path = self._check_proto(path)
-        api_key = self.opts["pillar"]["http"]["api_key"]
+        api_key = self.__get_api_key()
         load = {"path": path, "saltenv": saltenv, "api_key": api_key, "cmd": "_serve_file"}
         if gzip:
             gzip = int(gzip)
@@ -1367,7 +1380,7 @@ class RemoteClient(Client):
         """
         List the files on the master
         """
-        api_key = self.opts["pillar"]["http"]["api_key"]
+        api_key = self.__get_api_key()
         load = {"saltenv": saltenv, "prefix": prefix, "api_key": api_key, "cmd": "_file_list"}
         return self._channel_send(
             load,
@@ -1461,7 +1474,7 @@ class RemoteClient(Client):
         """
         Return a list of the files in the file server's specified environment
         """
-        api_key = self.opts["pillar"]["http"]["api_key"]
+        api_key = self.__get_api_key()
         load = {"saltenv": saltenv, "api_key": api_key, "cmd": "_file_list"}
         return self._channel_send(
             load,
