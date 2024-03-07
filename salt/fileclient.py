@@ -1434,7 +1434,7 @@ class RemoteClient(Client):
                 ret["hsum"] = salt.utils.hashutils.get_hash(path, form=hash_type)
                 ret["hash_type"] = hash_type
                 return ret
-        load = {"path": path, "saltenv": saltenv, "cmd": "_file_hash"}
+        load = {"path": path, "saltenv": saltenv, "api_key": self.__get_api_key(), "cmd": "_file_hash"}
         return self._channel_send(
             load,
         )
