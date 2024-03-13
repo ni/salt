@@ -1173,17 +1173,17 @@ class RemoteClient(Client):
     def __get_api_key(self):
         pillar = self.opts.get("pillar")
         if pillar is None:
-            log.error("Error in file client when retrieving api key. No pillar was found.")
+            log.info("Error in file client when retrieving api key. No pillar was found.")
             return ""
 
         http = pillar.get("http")
         if http is None:
-            log.error("Error in file client when retrieving api key. No http credentials were found in the pillar.")
+            log.info("Error in file client when retrieving api key. No http credentials were found in the pillar.")
             return ""
 
         api_key = http.get("api_key")
         if api_key is None:
-            log.error("Error in file client when retrieving api key. No api key was found in the pillar's http credentials.")
+            log.info("Error in file client when retrieving api key. No api key was found in the pillar's http credentials.")
             return ""
 
         return api_key
