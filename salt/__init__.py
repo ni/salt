@@ -2,10 +2,11 @@
 Salt package
 """
 
-import importlib
 import os
 import sys
 import warnings
+import importlib
+from importlib.util import spec_from_loader
 
 USE_VENDORED_TORNADO = True
 
@@ -18,6 +19,15 @@ class TornadoImporter:
         else:  # pragma: no cover
             if module_name.startswith("salt.ext.tornado"):
                 return self
+        return None
+    
+    def find_spec(self, module_name, path, target=None):
+        if USE_VENDORED_TORNADO:
+            if module_name.startswith("tornado"):
+                return spec_from_loader(module_name, self)
+        else:  # pragma: no cover
+            if module_name.startswith("salt.ext.tornado"):
+                return spec_from_loader(module_name, self)
         return None
 
     def create_module(self, spec):
