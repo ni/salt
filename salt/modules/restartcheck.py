@@ -543,6 +543,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
             continue
         try:
             readlink = os.readlink('/proc/{0}/exe'.format(pid))
+            readlink = readlink.replace(' (deleted)', '')
         except OSError:
             excludepid.append(pid)
             continue
