@@ -115,6 +115,7 @@ if ( $PythonDir ) {
 	# use System Python if no Python directory was specified
 	$PYTHON_DIR = (python -c "import sys, os; print(os.path.dirname(sys.executable))")
 }
+Write-Host "Using Python installation directory: " $PYTHON_DIR
 
 #-------------------------------------------------------------------------------
 # Prepping Environment
@@ -134,9 +135,7 @@ if ( Test-Path -Path "$BUILD_DIR" ) {
 # Copying Python distribution to build directory
 #-------------------------------------------------------------------------------
 Write-Host "Copying Python distribution to build directory" -NoNewLine
-Start-Process -FilePath "xcopy" `
-			-ArgumentList "$PYTHON_DIR", "$BUILD_DIR", "/E", "/I", "/Y", "/H" `
-			-Wait -WindowStyle Hidden
+Copy-Item -Path $PYTHON_DIR -Destination $BUILD_DIR -Force -Recurse
 If ( Test-Path -Path "$BLD_PY_BIN" ) {
     Write-Result "Success" -ForegroundColor Green
 } else {
