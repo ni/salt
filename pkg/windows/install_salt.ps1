@@ -71,7 +71,7 @@ if ( $BuildDir ) {
 }
 $SITE_PKGS_DIR = "$BUILD_DIR\Lib\site-packages"
 $SCRIPTS_DIR   = "$BUILD_DIR\Scripts"
-$PYTHON_BIN    = "$SCRIPTS_DIR\python.exe"
+$PYTHON_BIN    = "$BUILD_DIR\python.exe"
 $PY_VERSION    = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
 $PY_MAJOR_VERSION = "$($PY_VERSION.Major)"
 $PY_MINOR_VERSION = "$($PY_VERSION.Minor)"
@@ -81,6 +81,9 @@ $ARCH          = $(. $PYTHON_BIN -c "import platform; print(platform.architectur
 # Script Variables
 $PROJECT_DIR     = $(git rev-parse --show-toplevel)
 $SALT_DEPS       = "$PROJECT_DIR\requirements\static\pkg\py$PY_VERSION\windows.txt"
+
+# Environment variables
+$env:SALT_BUILD_ALL_BINS = 1 # this is necessary because salt builds no longer include salt-master and some other scripts on Windows
 
 if ( ! $SkipInstall ) {
   #-------------------------------------------------------------------------------
@@ -123,8 +126,8 @@ if ( ! $SkipInstall ) {
   # Installing dependencies
   #-------------------------------------------------------------------------------
   Write-Host "Installing dependencies: " -NoNewline
-  Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
-                -ArgumentList "install", "-r", "$SALT_DEPS" `
+  Start-Process -FilePath $PYTHON_BIN `
+                -ArgumentList "-m", "pip", "install", "-r", "$SALT_DEPS" `
                 -WorkingDirectory "$PROJECT_DIR" `
                 -Wait -WindowStyle Hidden
   if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {
@@ -234,14 +237,14 @@ if ( ! $SkipInstall ) {
   }
   try {
       $env:RELENV_PIP_DIR = "yes"
-      Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
-                -ArgumentList "install", $InstallPath `
+      Start-Process -FilePath $PYTHON_BIN `
+                "-m", "pip", "install", "$InstallPath" `
                 -WorkingDirectory "$PROJECT_DIR" `
                 -Wait -WindowStyle Hidden
   } finally {
       Remove-Item env:\RELENV_PIP_DIR
   }
-  if ( Test-Path -Path "$BUILD_DIR\salt-minion.exe" ) {
+  if ( Test-Path -Path "$SCRIPTS_DIR\salt-minion.exe" ) {
       Write-Result "Success" -ForegroundColor Green
   } else {
       Write-Result "Failed" -ForegroundColor Red

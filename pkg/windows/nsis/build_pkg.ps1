@@ -59,7 +59,7 @@ $INSTALLER_DIR  = "$SCRIPT_DIR\installer"
 $SCRIPTS_DIR    = "$BUILDENV_DIR\Scripts"
 $SITE_PKGS_DIR  = "$BUILDENV_DIR\Lib\site-packages"
 $BUILD_SALT_DIR = "$SITE_PKGS_DIR\salt"
-$PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
+$PYTHON_BIN     = "$BUILDENV_DIR\python.exe"
 $PY_VERSION     = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
 $PY_VERSION     = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
 $NSIS_BIN       = "$( ${env:ProgramFiles(x86)} )\NSIS\makensis.exe"
@@ -106,15 +106,7 @@ if ( Test-Path -Path "$PYTHON_BIN" ) {
 }
 
 Write-Host "Verifying Salt Installation: " -NoNewline
-if ( Test-Path -Path "$BUILDENV_DIR\salt-minion.exe" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Verifying NSIS Installation: " -NoNewline
-if ( Test-Path -Path "$NSIS_BIN" ) {
+if ( Test-Path -Path "$SCRIPTS_DIR\salt-minion.exe" ) {
     Write-Result "Success" -ForegroundColor Green
 } else {
     Write-Result "Failed" -ForegroundColor Red
@@ -406,69 +398,6 @@ $found | ForEach-Object {
     $_.LastWriteTime = $time_stamp
 }
 Write-Result "Success" -ForegroundColor Green
-
-#-------------------------------------------------------------------------------
-# Get the estimated size of the installation
-#-------------------------------------------------------------------------------
-Write-Host "Getting Estimated Installation Size: " -NoNewLine
-$estimated_size = [math]::Round(((Get-ChildItem "$BUILDENV_DIR" -Recurse -Force | Measure-Object -Sum Length).Sum / 1kb))
-if ( $estimated_size -gt 0 ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
-
-#-------------------------------------------------------------------------------
-# Build the Installer
-#-------------------------------------------------------------------------------
-
-Write-Host "Building the Installer: " -NoNewline
-$installer_name = "Salt-Minion-$Version-Py$($PY_VERSION.Split(".")[0])-$ARCH-Setup.exe"
-Start-Process -FilePath $NSIS_BIN `
-              -ArgumentList "/DSaltVersion=$Version", `
-                            "/DPythonArchitecture=$ARCH", `
-                            "/DEstimatedSize=$estimated_size", `
-                            "$INSTALLER_DIR\Salt-Minion-Setup.nsi" `
-              -Wait -WindowStyle Hidden
-if ( Test-Path -Path "$INSTALLER_DIR\$installer_name" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    Write-Host "Failed to find $installer_name in installer directory"
-    Write-Host "CMD:"
-    Write-Host "`"$NSIS_BIN`" /DSaltVersion=$Version /DPythonArchitecture=$ARCH /DEstimatedSize=$estimated_size `"$INSTALLER_DIR\Salt-Minion-Setup.nsi`""
-    exit 1
-}
-
-#-------------------------------------------------------------------------------
-# Move installer to build directory
-#-------------------------------------------------------------------------------
-
-if ( ! (Test-Path -Path "$BUILD_DIR") ) {
-    New-Item -Path "$BUILD_DIR" -ItemType Directory | Out-Null
-}
-if ( Test-Path -Path "$BUILD_DIR\$installer_name" ) {
-    Write-Host "Backing up existing installer: " -NoNewline
-    $new_name = "$installer_name.$( Get-Date -UFormat %s ).bak"
-    Move-Item -Path "$BUILD_DIR\$installer_name" `
-              -Destination "$BUILD_DIR\$new_name"
-    if ( Test-Path -Path "$BUILD_DIR\$new_name" ) {
-        Write-Result "Success" -ForegroundColor Green
-    } else {
-        Write-Result "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
-
-Write-Host "Moving the Installer: " -NoNewline
-Move-Item -Path "$INSTALLER_DIR\$installer_name" -Destination "$BUILD_DIR"
-if ( Test-Path -Path "$BUILD_DIR\$installer_name" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
 
 #-------------------------------------------------------------------------------
 # Script Complete

@@ -65,7 +65,7 @@ if ( $BuildDir ) {
 $SCRIPTS_DIR    = "$BUILD_DIR\Scripts"
 $BUILD_CONF_DIR = "$BUILD_DIR\configs"
 $SITE_PKGS_DIR  = "$BUILD_DIR\Lib\site-packages"
-$PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
+$PYTHON_BIN     = "$BUILD_DIR\python.exe"
 $PY_VERSION     = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
 $PY_VERSION     = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
 $ARCH           = $(. $PYTHON_BIN -c "import platform; print(platform.architecture()[0])")
@@ -100,7 +100,7 @@ if ( Test-Path -Path "$PYTHON_BIN" ) {
 }
 
 Write-Host "Verifying Salt Installation: " -NoNewline
-if ( Test-Path -Path "$BUILD_DIR\salt-minion.exe" ) {
+if ( Test-Path -Path "$SCRIPTS_DIR\salt-minion.exe" ) {
     Write-Result "Success" -ForegroundColor Green
 } else {
     Write-Result "Failed" -ForegroundColor Red
