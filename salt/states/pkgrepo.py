@@ -567,7 +567,9 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     if kwargs.get("clean_file", False):
         with salt.utils.files.fopen(kwargs["file"], "w"):
             pass
-
+    # allow repo renaming by default
+    if not "allow_renaming" in kwargs:
+        kwargs["allow_renaming"] = True
     try:
         if __grains__["os_family"] == "Debian":
             __salt__["pkg.mod_repo"](repo, saltenv=__env__, aptkey=aptkey, **kwargs)
