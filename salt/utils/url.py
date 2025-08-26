@@ -47,7 +47,10 @@ def create(path, saltenv=None):
     path = salt.utils.data.decode(path)
 
     query = f"saltenv={saltenv}" if saltenv else ""
-    return f"salt://{salt.utils.data.decode(urlunsplit(("", "", path, query, "")))}"
+    url = urlunsplit(("", "", path, query, ""))
+    decoded = salt.utils.data.decode(url)
+    return f"salt://{decoded}"
+
 
 def is_escaped(url):
     """
