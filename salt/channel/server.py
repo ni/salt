@@ -921,10 +921,12 @@ class PubServerChannel:
     def __setstate__(self, state):
         self.opts = state["opts"]
         self.state = state["presence_events"]
+        self.presence_events = state["presence_events"]
         self.transport = state["transport"]
         self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         self.present = {}
+        self.aes_funcs = salt.master.AESFuncs(self.opts)
 
     def close(self):
         self.transport.close()
