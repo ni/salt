@@ -502,7 +502,7 @@ class AsyncPubChannel:
             "version": 3,
         }
 
-        if self.ttype == "tcp":
+        if self.transport.ttype == "tcp":
             # send NI API key for TCP transport
             ret["x-ni-api-key"] = self.opts.get("x-ni-api-key")
 
