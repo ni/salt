@@ -832,7 +832,8 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
     """
 
     def __init__(
-        self, opts, io_loop=None, presence_callback=None, remove_presence_callback=None
+        self, opts, io_loop=None, presence_callback=None, remove_presence_callback=None,
+        send_presence_events_callback=None
     ):
         super().__init__(ssl_options=opts.get("ssl"))
         self.io_loop = io_loop
@@ -848,6 +849,10 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
             self.remove_presence_callback = remove_presence_callback
         else:
             self.remove_presence_callback = lambda subscriber: subscriber
+
+        if send_presence_events_callback:
+            self.send_presence_events_callback = send_presence_events_callback
+            self.io_loop.add_callback(self.send_presence_events_callback)
 
     def close(self):
         if self._closing:
@@ -964,6 +969,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
+        send_presence_events_callback=None
     ):
         """
         Bind to the interface specified in the configuration file
@@ -978,6 +984,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
             io_loop=io_loop,
             presence_callback=presence_callback,
             remove_presence_callback=remove_presence_callback,
+            send_presence_events_callback=send_presence_events_callback
         )
         sock = _get_socket(self.opts)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

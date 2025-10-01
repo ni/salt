@@ -905,12 +905,6 @@ class PubServerChannel:
         self.presence_events = presence_events
         self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
 
-        if presence_events:
-            io_loop = salt.ext.tornado.ioloop.IOLoop.current()
-            io_loop.add_future(
-                self._send_presence_events(),
-                lambda f: True)
-
     def __getstate__(self):
         return {
             "opts": self.opts,
@@ -960,7 +954,7 @@ class PubServerChannel:
             salt.master.SMaster.secrets = secrets
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.transport.publish_daemon(
-            self.publish_payload, self.presence_callback, self.remove_presence_callback
+            self.publish_payload, self.presence_callback, self.remove_presence_callback, self.send_presence_events_callback
         )
 
     def presence_callback(self, subscriber, msg):
@@ -981,14 +975,16 @@ class PubServerChannel:
         self._remove_client_present(subscriber)
 
     @salt.ext.tornado.gen.coroutine
-    def _send_presence_events(self):
-        while True:
-            data = {'present': list(self.present.keys())}
-            self.event.fire_event(
-                data,
-                salt.utils.event.tagify('present', 'presence')
-            )
-            yield salt.ext.tornado.gen.sleep(60)
+    def send_presence_events_callback(self):
+        if self.presence_events:
+            while True:
+                log.info(f"[ALEX] _send_presence_events: PRESENT: {self.present} ; PRESENT.KEYS: {self.present.keys()}")
+                data = {'present': list(self.present.keys())}
+                self.event.fire_event(
+                    data,
+                    salt.utils.event.tagify('present', 'presence')
+                )
+                yield salt.ext.tornado.gen.sleep(60)
 
     def _add_client_present(self, client):
         id_ = client.id_
