@@ -19,17 +19,20 @@ import salt.utils.platform
 import salt.modules.cmdmod
 
 __salt__ = {
-    'cmd.run': salt.modules.cmdmod._run_quiet,
-    'cmd.run_all': salt.modules.cmdmod._run_all_quiet
+    "cmd.run": salt.modules.cmdmod._run_quiet,
+    "cmd.run_all": salt.modules.cmdmod._run_all_quiet,
+    "cmd.powershell": salt.modules.cmdmod.powershell,
 }
+
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
 
 def disks():
-    '''
+    """
     Return list of disk devices
-    '''
+    """
     if salt.utils.platform.is_freebsd():
         return _freebsd_geom()
     elif salt.utils.platform.is_linux():
@@ -126,10 +129,10 @@ def _freebsd_geom():
 
 
 def _linux_disks():
-    '''
+    """
     Return list of disk devices and work out if they are SSD or HDD.
-    '''
-    ret = {'disks': [], 'SSDs': []}
+    """
+    ret = {"disks": [], "SSDs": []}
 
     for entry in glob.glob('/sys/block/*/queue/rotational'):
         try:
@@ -153,39 +156,27 @@ def _linux_disks():
 
 
 def _windows_disks():
-    wmic = salt.utils.path.which('wmic')
+    cmd = "Get-PhysicalDisk | Select DeviceID, MediaType"
+    ret = {"disks": [], "SSDs": []}
 
-    namespace = r'\\root\microsoft\windows\storage'
-    path = 'MSFT_PhysicalDisk'
-    get = 'DeviceID,MediaType'
+    drive_info = __salt__["cmd.powershell"](cmd)
 
-    ret = {'disks': [], 'SSDs': []}
+    if not drive_info:
+        log.trace("No physical discs found")
+        return ret
 
-    cmdret = __salt__['cmd.run_all'](
-        '{0} /namespace:{1} path {2} get {3} /format:table'.format(
-            wmic, namespace, path, get))
+    # We need a list of dict
+    if isinstance(drive_info, dict):
+        drive_info = [drive_info]
 
-    if cmdret['retcode'] != 0:
-        log.trace('Disk grain does not support this version of Windows')
-    else:
-        for line in cmdret['stdout'].splitlines():
-            info = line.split()
-            if len(info) != 2 or not info[0].isdigit() or not info[1].isdigit():
-                continue
-            device = r'\\.\PhysicalDrive{0}'.format(info[0])
-            mediatype = info[1]
-            if mediatype == '3':
-                log.trace('Device %s reports itself as an HDD', device)
-                ret['disks'].append(device)
-            elif mediatype == '4':
-                log.trace('Device %s reports itself as an SSD', device)
-                ret['SSDs'].append(device)
-                ret['disks'].append(device)
-            elif mediatype == '5':
-                log.trace('Device %s reports itself as an SCM', device)
-                ret['disks'].append(device)
-            else:
-                log.trace('Device %s reports itself as Unspecified', device)
-                ret['disks'].append(device)
+    for drive in drive_info:
+        # Make sure we have a valid drive type
+        if drive["MediaType"].lower() not in ["hdd", "ssd", "scm", "unspecified"]:
+            log.trace(f'Unknown media type: {drive["MediaType"]}')
+            continue
+        device = rf'\\.\PhysicalDrive{drive["DeviceID"]}'
+        ret["disks"].append(device)
+        if drive["MediaType"].lower() == "ssd":
+            ret["SSDs"].append(device)
 
     return ret
