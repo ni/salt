@@ -1594,7 +1594,7 @@ class Crypticle:
             os.close(fd)
             with salt.utils.files.fopen(tmp, "w") as fp:
                 fp.write(cls.generate_key_string(key_size))
-            os.rename(tmp, path)
+            os.replace(tmp, path)
 
     @classmethod
     def read_key(cls, path):
