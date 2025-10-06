@@ -978,7 +978,6 @@ class PubServerChannel:
     def send_presence_events_callback(self):
         if self.presence_events:
             while True:
-                log.info(f"[ALEX] _send_presence_events: PRESENT: {self.present} ; PRESENT.KEYS: {self.present.keys()}")
                 data = {'present': list(self.present.keys())}
                 self.event.fire_event(
                     data,
