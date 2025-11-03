@@ -870,7 +870,7 @@ def install(
 
     if list_pkgs_errors:
         raise CommandExecutionError(
-            "Problem encountered after installing package(s). Cannot provide changes list.",
+            "Problem encountered after successfully installing package(s). Cannot provide changes list.",
             info={"errors": list_pkgs_errors}
         )
 
