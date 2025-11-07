@@ -71,7 +71,7 @@ if ( $BuildDir ) {
 }
 $SITE_PKGS_DIR = "$BUILD_DIR\Lib\site-packages"
 $SCRIPTS_DIR   = "$BUILD_DIR\Scripts"
-$PYTHON_BIN    = "$BUILD_DIR\python.exe"
+$PYTHON_BIN    = "$SCRIPTS_DIR\python.exe"
 $PY_VERSION    = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
 $PY_MAJOR_VERSION = "$($PY_VERSION.Major)"
 $PY_MINOR_VERSION = "$($PY_VERSION.Minor)"
@@ -126,8 +126,8 @@ if ( ! $SkipInstall ) {
   # Installing dependencies
   #-------------------------------------------------------------------------------
   Write-Host "Installing dependencies: " -NoNewline
-  Start-Process -FilePath $PYTHON_BIN `
-                -ArgumentList "-m", "pip", "install", "-r", "$SALT_DEPS" `
+  Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
+                -ArgumentList "install", "-r", "$SALT_DEPS" `
                 -WorkingDirectory "$PROJECT_DIR" `
                 -Wait -WindowStyle Hidden
   if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {
@@ -237,14 +237,14 @@ if ( ! $SkipInstall ) {
   }
   try {
       $env:RELENV_PIP_DIR = "yes"
-      Start-Process -FilePath $PYTHON_BIN `
-                "-m", "pip", "install", "$InstallPath" `
+      Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
+                -ArgumentList "install", $InstallPath `
                 -WorkingDirectory "$PROJECT_DIR" `
                 -Wait -WindowStyle Hidden
   } finally {
       Remove-Item env:\RELENV_PIP_DIR
   }
-  if ( Test-Path -Path "$SCRIPTS_DIR\salt-minion.exe" ) {
+  if ( Test-Path -Path "$BUILD_DIR\salt-minion.exe" ) {
       Write-Result "Success" -ForegroundColor Green
   } else {
       Write-Result "Failed" -ForegroundColor Red
