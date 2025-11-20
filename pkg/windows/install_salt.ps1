@@ -121,21 +121,6 @@ if ( ! $SkipInstall ) {
           }
       }
   }
-
-  #-------------------------------------------------------------------------------
-  # Installing dependencies
-  #-------------------------------------------------------------------------------
-  Write-Host "Installing dependencies: " -NoNewline
-  Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
-                -ArgumentList "install", "-r", "$SALT_DEPS" `
-                -WorkingDirectory "$PROJECT_DIR" `
-                -Wait -WindowStyle Hidden
-  if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {
-      Write-Result "Success" -ForegroundColor Green
-  } else {
-      Write-Result "Failed" -ForegroundColor Red
-      exit 1
-  }
 }
 
 #-------------------------------------------------------------------------------
@@ -238,7 +223,7 @@ if ( ! $SkipInstall ) {
   try {
       $env:RELENV_PIP_DIR = "yes"
       Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
-                -ArgumentList "install", $InstallPath `
+                -ArgumentList "install", "--no-deps", $InstallPath `
                 -WorkingDirectory "$PROJECT_DIR" `
                 -Wait -WindowStyle Hidden
   } finally {
