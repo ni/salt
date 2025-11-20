@@ -358,6 +358,15 @@ class AsyncReqChannel:
             except Exception as exc:  # pylint: disable=broad-except
                 log.trace("Failed to send msg %r", exc)
                 if _try >= tries:
+                    if isinstance(exc, salt.ext.tornado.iostream.StreamClosedError):
+                        # Convert a tornado.iostream.StreamClosedError to a SaltClientError as
+                        # the StreamClosedError is not properly handled by callers (e.g. crypt._authenticate,
+                        # which was noticed to sometimes break Windows minions from reconnecting, 
+                        # upon restarting the master machine. The issue seems to occur more consistently when using
+                        # a Windows master).
+                        # NOTE: Converting this particular exception to a SaltClientError was the behavior before 
+                        # https://github.com/saltstack/salt/pull/61468.
+                        raise salt.exceptions.SaltClientError("Connection to master lost") 
                     raise
                 else:
                     _try += 1
