@@ -12,6 +12,12 @@ from collections import deque
 
 from salt._logging.mixins import ExcInfoOnLogLevelFormatMixin
 
+# third party libraries
+if sys.platform.startswith("win"):
+    # Added by NI. Only needed on Windows where log rotation does not work
+    # properly when another process keeps a handle to the logfile open.
+    import concurrent_log_handler
+
 log = logging.getLogger(__name__)
 
 
@@ -159,6 +165,16 @@ class RotatingFileHandler(
 
         if not handled:
             super().handleError(record)
+
+if sys.platform.startswith("win"):
+    class ConcurrentRotatingFileHandler(
+        ExcInfoOnLogLevelFormatMixin, concurrent_log_handler.ConcurrentRotatingFileHandler
+    ):
+        """
+        Added by NI. Use third party ConcurrentRotatingFileHandler to address log rotation on Windows properly,
+        where a file can't be renamed if a handle to it is held by another process.
+        Concurrent Rotating file handler which properly handles exc_info on a per handler basis
+        """
 
 
 class WatchedFileHandler(
