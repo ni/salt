@@ -2387,10 +2387,10 @@ class Events:
                 yield "retry: 400\n"
 
                 while True:
-                    # make sure the token is still valid
-                    if not self._is_valid_token(auth_token):
-                        logger.debug("Token is no longer valid")
-                        break
+                    # Skip revalidation of token as each check is done through a TCP connection, an approach which does not scale.
+                    # if not self._is_valid_token(auth_token):
+                    #     logger.debug("Token is no longer valid")
+                    #     break
 
                     data = next(stream)
                     yield "tag: {}\n".format(data.get("tag", ""))
