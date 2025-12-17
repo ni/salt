@@ -1859,6 +1859,7 @@ _ID_AND_NAME_TO_OS_NAME_MAP = {
     ("astra", "Astra Linux (Orel)"): "AstraLinuxCE",
     ("astra", "Astra Linux (Smolensk)"): "AstraLinuxSE",
     ("pop", "Pop!_OS"): "Pop",
+    ("nilrt", "NI Linux Real-Time"): "NILinuxRT",
 }
 
 
