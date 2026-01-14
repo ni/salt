@@ -7,6 +7,10 @@
 """
 
 import logging
+import os
+import subprocess
+import threading
+import psutil
 
 import salt.client.netapi
 import salt.utils.files
@@ -47,8 +51,38 @@ class SaltAPI(parsers.SaltAPIParser):
         """
         super().start()
         if check_user(self.config["user"]):
+            self.check_memory()
+
             log.info("The salt-api is starting up")
             self.api.run()
+
+    def check_memory(self):
+        threshold_mb = 2048
+        check_interval_seconds = 3600
+
+        try:
+            root = psutil.Process(os.getpid())
+            procs = [root] + root.children(recursive=True)
+
+            for p in procs:
+                try:
+                    mem_mb = p.memory_info().rss / (1024 * 1024)
+                    if mem_mb > threshold_mb:
+                        log.error("The salt-api is OOM. Shutting down...")
+                        subprocess.call(
+                            ["taskkill", "/F", "/PID", str(os.getpid()), "/T"],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                        )
+                        return
+                except psutil.NoSuchProcess:
+                    pass
+                
+        except Exception:
+            log.exception("The memory check for salt-api has failed.")
+
+        finally:
+            threading.Timer(check_interval_seconds, lambda: self.check_memory()).start()
 
     def shutdown(self, exitcode=0, exitmsg=None):
         """
