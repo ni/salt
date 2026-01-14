@@ -58,7 +58,7 @@ class SaltAPI(parsers.SaltAPIParser):
 
     def check_memory(self):
         threshold_mb = 2048
-        check_interval_seconds = 300
+        check_interval_seconds = 3600
 
         try:
             root = psutil.Process(os.getpid())
