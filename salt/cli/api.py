@@ -77,6 +77,9 @@ class SaltAPI(parsers.SaltAPIParser):
                         return
                 except psutil.NoSuchProcess:
                     pass
+                
+        except Exception:
+            log.exception("The memory check for salt-api has failed.")
 
         finally:
             threading.Timer(check_interval_seconds, lambda: self.check_memory()).start()
