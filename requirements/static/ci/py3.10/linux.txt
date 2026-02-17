@@ -536,7 +536,7 @@ virtualenv==20.7.2
     #   pytest-salt-factories
 watchdog==0.10.3
     # via -r requirements/static/ci/common.in
-websocket-client==0.40.0
+#websocket-client==0.40.0
     # via kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
