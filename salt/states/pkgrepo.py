@@ -459,7 +459,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         kwargs.pop(kwarg, None)
 
     try:
-        pre = __salt__["pkg.get_repo"](repo=repo, **kwargs)
+        pre = __salt__["pkg.get_repo"](repo, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = f"Failed to examine repo '{name}': {exc}"
@@ -585,7 +585,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         return ret
 
     try:
-        post = __salt__["pkg.get_repo"](repo=repo, **kwargs)
+        post = __salt__["pkg.get_repo"](repo, **kwargs)
         if pre:
             for kwarg in sanitizedkwargs:
                 if post.get(kwarg) != pre.get(kwarg):
