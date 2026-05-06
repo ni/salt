@@ -901,6 +901,14 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         self.clients.add(client)
         self.io_loop.spawn_callback(self._stream_read, client)
 
+    @salt.ext.tornado.gen.coroutine
+    def _write_payload(self, client, payload):
+        deadline = self.io_loop.time() + 5
+        yield salt.ext.tornado.gen.with_timeout(
+            deadline,
+            client.stream.write(payload),
+        )
+ 
     # TODO: ACK the publish through IPC
     @salt.ext.tornado.gen.coroutine
     def publish_payload(self, package, topic_list=None):
@@ -922,11 +930,17 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
                 if not sent:
                     log.debug("Publish target %s not connected %r", topic, self.clients)
         else:
-            for client in list(self.clients):
+            for client in sorted(self.clients, key=lambda c: c.id_ is None):
                 try:
                     # Write the packed str
-                    yield client.stream.write(payload)
+                    log.debug("Sending the package to client %s (id=%r)", client.address, client.id_)
+                    yield self._write_payload(client, payload)
+                    log.debug("Finish sending to client %s (id=%r)", client.address, client.id_)
+                except salt.ext.tornado.gen.TimeoutError:
+                    log.warning("TIMEOUT writing payload (%d bytes) to client %s (id=%r)", len(payload), client.address, client.id_)
+                    to_remove.append(client)
                 except salt.ext.tornado.iostream.StreamClosedError:
+                    log.debug("Stream is closed for client %s (id=%r)", client.address, client.id_)
                     to_remove.append(client)
         for client in to_remove:
             log.debug(
