@@ -937,7 +937,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
                     yield self._write_payload(client, payload)
                     log.debug("Finish sending to client %s (id=%r)", client.address, client.id_)
                 except salt.ext.tornado.gen.TimeoutError:
-                    log.debug("TIMEOUT writing payload (%d bytes) to client %s (id=%r)", len(payload), client.address, client.id_)
+                    log.warning("TIMEOUT writing payload (%d bytes) to client %s (id=%r)", len(payload), client.address, client.id_)
                     to_remove.append(client)
                 except salt.ext.tornado.iostream.StreamClosedError:
                     log.debug("Stream is closed for client %s (id=%r)", client.address, client.id_)
