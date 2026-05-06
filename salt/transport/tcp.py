@@ -918,7 +918,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         if topic_list:
             for topic in topic_list:
                 sent = False
-                for client in self.clients:
+                for client in list(self.clients):
                     if topic == client.id_:
                         try:
                             # Write the packed str
