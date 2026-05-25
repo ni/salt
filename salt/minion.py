@@ -670,9 +670,16 @@ class MinionBase:
             conn = False
             last_exc = None
 
+            # In some execution paths (e.g. salt-call), eval_master() may be invoked
+            # with 'failed=True' even on the initial call. This prevents the original
+            # logic (which relies on 'if not failed') from initializing
+            # master_uri_list, leading to missing data and runtime errors.
+            is_first_call = not getattr(self, "_eval_master_called", False)
+            self._eval_master_called = True
+
             # if the connection to the saltmaster was lost,
             # don't reinitialize the uri list to keep using the same one
-            if not failed:
+            if is_first_call or not failed:
                 opts["master_uri_list"] = []
 
             opts["local_masters"] = copy.copy(opts["master"])
@@ -689,7 +696,7 @@ class MinionBase:
 
             # if the connection to the saltmaster was lost,
             # don't reinitialize the uri list to keep using the same one
-            if not failed:
+            if is_first_call or not failed:
                 # This sits outside of the connection loop below because it needs to set
                 # up a list of master URIs regardless of which masters are available
                 # to connect _to_. This is primarily used for masterless mode, when
@@ -729,7 +736,7 @@ class MinionBase:
                     opts["master"] = master
 
                     # look for a different ip only after attempting current one 3 times
-                    if not failed or (failed and attempts > 3):
+                    if is_first_call or not failed or (failed and attempts > 3):
                         opts.update(prep_ip_port(opts))
                         if opts["master_type"] == "failover":
                             try:
