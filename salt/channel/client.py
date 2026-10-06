@@ -192,7 +192,7 @@ class AsyncReqChannel:
         }
         if self.ttype == "tcp":
             # send NI API key for TCP transport
-            ret["ni-api-key"] = self.opts["ni_api_key"]
+            ret["x-ni-api-key"] = self.opts.get("x-ni-api-key")
         if self.crypt == "aes":
             ret["id"] = self.opts["id"]
             ret["enc_algo"] = self.opts["encryption_algorithm"]
@@ -592,7 +592,7 @@ class AsyncPubChannel:
 
         if self.ttype == "tcp":
             # send NI API key for TCP transport
-            ret["ni-api-key"] = self.opts["ni_api_key"]
+            ret["x-ni-api-key"] = self.opts.get("x-ni-api-key")
 
         return ret
 
