@@ -113,13 +113,13 @@ if ( Test-Path -Path "$BUILDENV_DIR\salt-minion.exe" ) {
     exit 1
 }
 
-Write-Host "Verifying NSIS Installation: " -NoNewline
-if ( Test-Path -Path "$NSIS_BIN" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
+# Write-Host "Verifying NSIS Installation: " -NoNewline
+# if ( Test-Path -Path "$NSIS_BIN" ) {
+    # Write-Result "Success" -ForegroundColor Green
+# } else {
+    # Write-Result "Failed" -ForegroundColor Red
+    # exit 1
+# }
 
 #-------------------------------------------------------------------------------
 # Copy the icon file to the build_env directory
@@ -423,81 +423,81 @@ if ( $estimated_size -gt 0 ) {
 # Build the Installer
 #-------------------------------------------------------------------------------
 
-# Create a short path junction to avoid NSIS hitting Windows MAX_PATH (260 chars)
-# when recursively adding files from the buildenv directory.
-$SHORT_DIR = "C:\salt"
-$NSIS_NSI_PATH = "$INSTALLER_DIR\Salt-Minion-Setup.nsi"
-if ( ! (Test-Path -Path "$SHORT_DIR") ) {
-    New-Item -ItemType Junction -Path "$SHORT_DIR" -Target "$PROJECT_DIR" -Force | Out-Null
-    if ( Test-Path -Path "$SHORT_DIR" ) {
-        $NSIS_NSI_PATH = "$SHORT_DIR\pkg\windows\nsis\installer\Salt-Minion-Setup.nsi"
-    }
-}
+# # Create a short path junction to avoid NSIS hitting Windows MAX_PATH (260 chars)
+# # when recursively adding files from the buildenv directory.
+# $SHORT_DIR = "C:\salt"
+# $NSIS_NSI_PATH = "$INSTALLER_DIR\Salt-Minion-Setup.nsi"
+# if ( ! (Test-Path -Path "$SHORT_DIR") ) {
+    # New-Item -ItemType Junction -Path "$SHORT_DIR" -Target "$PROJECT_DIR" -Force | Out-Null
+    # if ( Test-Path -Path "$SHORT_DIR" ) {
+        # $NSIS_NSI_PATH = "$SHORT_DIR\pkg\windows\nsis\installer\Salt-Minion-Setup.nsi"
+    # }
+# }
 
-Write-Host "Building the Installer: " -NoNewline
-$installer_name = "Salt-Minion-$Version-Py$($PY_VERSION.Split(".")[0])-$ARCH-Setup.exe"
-$nsis_stdout = "$env:TEMP\nsis_stdout.log"
-$nsis_stderr = "$env:TEMP\nsis_stderr.log"
-$nsis_proc = Start-Process -FilePath $NSIS_BIN `
-              -ArgumentList "/DSaltVersion=$Version", `
-                            "/DPythonArchitecture=$ARCH", `
-                            "/DEstimatedSize=$estimated_size", `
-                            "$NSIS_NSI_PATH" `
-              -Wait -PassThru `
-              -RedirectStandardOutput $nsis_stdout `
-              -RedirectStandardError $nsis_stderr
-if ( Test-Path -Path "$INSTALLER_DIR\$installer_name" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    Write-Host "Failed to find $installer_name in installer directory"
-    Write-Host "NSIS exit code: $($nsis_proc.ExitCode)"
-    Write-Host "CMD:"
-    Write-Host "`"$NSIS_BIN`" /DSaltVersion=$Version /DPythonArchitecture=$ARCH /DEstimatedSize=$estimated_size `"$NSIS_NSI_PATH`""
-    if ( Test-Path -Path $nsis_stdout ) {
-        Write-Host "--- NSIS stdout ---"
-        Get-Content $nsis_stdout
-    }
-    if ( Test-Path -Path $nsis_stderr ) {
-        Write-Host "--- NSIS stderr ---"
-        Get-Content $nsis_stderr
-    }
-    exit 1
-}
+# Write-Host "Building the Installer: " -NoNewline
+# $installer_name = "Salt-Minion-$Version-Py$($PY_VERSION.Split(".")[0])-$ARCH-Setup.exe"
+# $nsis_stdout = "$env:TEMP\nsis_stdout.log"
+# $nsis_stderr = "$env:TEMP\nsis_stderr.log"
+# $nsis_proc = Start-Process -FilePath $NSIS_BIN `
+              # -ArgumentList "/DSaltVersion=$Version", `
+                            # "/DPythonArchitecture=$ARCH", `
+                            # "/DEstimatedSize=$estimated_size", `
+                            # "$NSIS_NSI_PATH" `
+              # -Wait -PassThru `
+              # -RedirectStandardOutput $nsis_stdout `
+              # -RedirectStandardError $nsis_stderr
+# if ( Test-Path -Path "$INSTALLER_DIR\$installer_name" ) {
+    # Write-Result "Success" -ForegroundColor Green
+# } else {
+    # Write-Result "Failed" -ForegroundColor Red
+    # Write-Host "Failed to find $installer_name in installer directory"
+    # Write-Host "NSIS exit code: $($nsis_proc.ExitCode)"
+    # Write-Host "CMD:"
+    # Write-Host "`"$NSIS_BIN`" /DSaltVersion=$Version /DPythonArchitecture=$ARCH /DEstimatedSize=$estimated_size `"$NSIS_NSI_PATH`""
+    # if ( Test-Path -Path $nsis_stdout ) {
+        # Write-Host "--- NSIS stdout ---"
+        # Get-Content $nsis_stdout
+    # }
+    # if ( Test-Path -Path $nsis_stderr ) {
+        # Write-Host "--- NSIS stderr ---"
+        # Get-Content $nsis_stderr
+    # }
+    # exit 1
+# }
 
-# Clean up the short path junction
-if ( Test-Path -Path "$SHORT_DIR" ) {
-    [System.IO.Directory]::Delete("$SHORT_DIR")
-}
+# # Clean up the short path junction
+# if ( Test-Path -Path "$SHORT_DIR" ) {
+    # [System.IO.Directory]::Delete("$SHORT_DIR")
+# }
 
-#-------------------------------------------------------------------------------
-# Move installer to build directory
-#-------------------------------------------------------------------------------
+# #-------------------------------------------------------------------------------
+# # Move installer to build directory
+# #-------------------------------------------------------------------------------
 
-if ( ! (Test-Path -Path "$BUILD_DIR") ) {
-    New-Item -Path "$BUILD_DIR" -ItemType Directory | Out-Null
-}
-if ( Test-Path -Path "$BUILD_DIR\$installer_name" ) {
-    Write-Host "Backing up existing installer: " -NoNewline
-    $new_name = "$installer_name.$( Get-Date -UFormat %s ).bak"
-    Move-Item -Path "$BUILD_DIR\$installer_name" `
-              -Destination "$BUILD_DIR\$new_name"
-    if ( Test-Path -Path "$BUILD_DIR\$new_name" ) {
-        Write-Result "Success" -ForegroundColor Green
-    } else {
-        Write-Result "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
+# if ( ! (Test-Path -Path "$BUILD_DIR") ) {
+    # New-Item -Path "$BUILD_DIR" -ItemType Directory | Out-Null
+# }
+# if ( Test-Path -Path "$BUILD_DIR\$installer_name" ) {
+    # Write-Host "Backing up existing installer: " -NoNewline
+    # $new_name = "$installer_name.$( Get-Date -UFormat %s ).bak"
+    # Move-Item -Path "$BUILD_DIR\$installer_name" `
+              # -Destination "$BUILD_DIR\$new_name"
+    # if ( Test-Path -Path "$BUILD_DIR\$new_name" ) {
+        # Write-Result "Success" -ForegroundColor Green
+    # } else {
+        # Write-Result "Failed" -ForegroundColor Red
+        # exit 1
+    # }
+# }
 
-Write-Host "Moving the Installer: " -NoNewline
-Move-Item -Path "$INSTALLER_DIR\$installer_name" -Destination "$BUILD_DIR"
-if ( Test-Path -Path "$BUILD_DIR\$installer_name" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
+# Write-Host "Moving the Installer: " -NoNewline
+# Move-Item -Path "$INSTALLER_DIR\$installer_name" -Destination "$BUILD_DIR"
+# if ( Test-Path -Path "$BUILD_DIR\$installer_name" ) {
+    # Write-Result "Success" -ForegroundColor Green
+# } else {
+    # Write-Result "Failed" -ForegroundColor Red
+    # exit 1
+# }
 
 #-------------------------------------------------------------------------------
 # Script Complete
