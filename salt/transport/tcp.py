@@ -484,7 +484,9 @@ class PublishClient(salt.transport.base.PublishClient):
             # body = salt.utils.msgpack.loads(messages)
             # body = salt.transport.frame.decode_embedded_strs(body)
         else:
-            body = messages
+            # body = messages
+            # We need to decode here since our SaltMaster is not adapted to 3008 Master changes.
+            body = salt.transport.frame.decode_embedded_strs(messages)
         return body
 
     async def send(self, msg):
