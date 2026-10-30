@@ -1019,7 +1019,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
     @property
     def _property_scripts(self):
-        return salt_build_backend.get_scripts(self)
+        return []
 
     @property
     def _property_install_requires(self):
