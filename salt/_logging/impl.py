@@ -876,7 +876,6 @@ def setup_logfile_handler(
                         maxBytes=max_bytes,
                         backupCount=backup_count,
                         encoding="utf-8",
-                        delay=0,
                     )
                 else:
                     handler = RotatingFileHandler(
