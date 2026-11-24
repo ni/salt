@@ -1548,12 +1548,9 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
         pre_opts.update(
             salt.config.include_config(include, opts["conf_file"], verbose=True)
         )
-        if "grains" in pre_opts:
-            opts["grains"] = pre_opts["grains"]
-        else:
-            opts["grains"] = {}
+        static_grains = pre_opts.get("grains", {})
     else:
-        opts["grains"] = {}
+        static_grains = {}
 
     grains_data = {}
     blist = opts.get("grains_blacklist", [])
@@ -1653,7 +1650,7 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
         except KeyError:
             pass
 
-    grains_data.update(opts["grains"])
+    grains_data.update(static_grains)
     # Write cache if enabled
     if opts.get("grains_cache", False):
         with salt.utils.files.set_umask(0o077):
@@ -1680,9 +1677,9 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
                     os.unlink(cfn)
 
     if grains_deep_merge:
-        salt.utils.dictupdate.update(grains_data, opts["grains"])
+        salt.utils.dictupdate.update(grains_data, static_grains)
     else:
-        grains_data.update(opts["grains"])
+        grains_data.update(static_grains)
 
     # Clean up loaded grains modules from sys.modules to free memory
     funcs.clean_modules()
