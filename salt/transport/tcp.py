@@ -1577,7 +1577,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         if client not in self.clients and getattr(client, "_slow_closed", False):
             return
         client._slow_closed = True
-        log.warning(
+        log.debug(
             "Publisher discarding slow subscriber %s (%s)",
             client.address,
             reason,
